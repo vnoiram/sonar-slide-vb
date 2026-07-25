@@ -58,11 +58,6 @@ internal sealed class TrayAppContext : ApplicationContext
         var menu = new ContextMenuStrip();
         menu.Items.Add($"Status: {_status}").Enabled = false;
         menu.Items.Add(_nova7.LastStatus).Enabled = false;
-        if (!string.IsNullOrWhiteSpace(_nova7.LastReport))
-        {
-            menu.Items.Add($"Nova 7 report: {_nova7.LastReport}").Enabled = false;
-        }
-
         menu.Items.Add($"Game: {VoiceMeeterTargets.FindOrCreate(_config.VoiceMeeterLayout, _config.GameParameter)}").Enabled = false;
         menu.Items.Add($"Chat: {VoiceMeeterTargets.FindOrCreate(_config.VoiceMeeterLayout, _config.ChatParameter)}").Enabled = false;
         menu.Items.Add(new ToolStripSeparator());
