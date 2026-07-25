@@ -1,0 +1,177 @@
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace SonarSlideVB;
+
+internal sealed class TrayAppContext : ApplicationContext
+{
+    private readonly NotifyIcon _notifyIcon;
+    private readonly VoiceMeeterRemote _voiceMeeter = new();
+    private readonly HotkeyManager _hotkeys = new();
+    private AppConfig _config;
+    private ChatMixController _chatMix;
+    private string _status = "Not connected";
+
+    public TrayAppContext()
+    {
+        _config = AppConfig.Load();
+        _chatMix = new ChatMixController(_voiceMeeter, _config);
+
+        _notifyIcon = new NotifyIcon
+        {
+            Icon = SystemIcons.Application,
+            Visible = true,
+            Text = "SonarSlideVB",
+        };
+        _notifyIcon.DoubleClick += (_, _) => ShowSettings();
+
+        _hotkeys.HotkeyPressed += OnHotkeyPressed;
+
+        RebuildMenu();
+        TryConnect(showNotification: false);
+        RegisterHotkeys();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _notifyIcon.Visible = false;
+            _notifyIcon.Dispose();
+            _hotkeys.Dispose();
+            _voiceMeeter.Dispose();
+        }
+
+        base.Dispose(disposing);
+    }
+
+    private void RebuildMenu()
+    {
+        var menu = new ContextMenuStrip();
+        menu.Items.Add($"Status: {_status}").Enabled = false;
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(_config.Enabled ? "Disable ChatMix" : "Enable ChatMix", null, (_, _) => ToggleEnabled());
+        menu.Items.Add("Game +", null, (_, _) => RunVoiceMeeterAction(_chatMix.NudgeGame));
+        menu.Items.Add("Chat +", null, (_, _) => RunVoiceMeeterAction(_chatMix.NudgeChat));
+        menu.Items.Add("Center", null, (_, _) => RunVoiceMeeterAction(_chatMix.Center));
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Reconnect", null, (_, _) => TryConnect(showNotification: true));
+        menu.Items.Add("Settings", null, (_, _) => ShowSettings());
+        menu.Items.Add("Exit", null, (_, _) => ExitThread());
+        _notifyIcon.ContextMenuStrip = menu;
+        _notifyIcon.Text = _config.Enabled ? "SonarSlideVB: enabled" : "SonarSlideVB: disabled";
+    }
+
+    private void TryConnect(bool showNotification)
+    {
+        try
+        {
+            _voiceMeeter.Load(_config.DllPath);
+            _voiceMeeter.Login();
+            _status = "Connected";
+            _chatMix.Apply();
+
+            if (showNotification)
+            {
+                ShowBalloon("Connected to VoiceMeeter.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _status = "Not connected";
+            if (showNotification)
+            {
+                ShowBalloon(ex.Message, ToolTipIcon.Warning);
+            }
+        }
+        finally
+        {
+            RebuildMenu();
+        }
+    }
+
+    private void RegisterHotkeys()
+    {
+        try
+        {
+            _hotkeys.Clear();
+            _hotkeys.Register("toggle", _config.ToggleHotkey);
+            _hotkeys.Register("game", _config.GameHotkey);
+            _hotkeys.Register("chat", _config.ChatHotkey);
+            _hotkeys.Register("center", _config.CenterHotkey);
+        }
+        catch (Exception ex)
+        {
+            ShowBalloon(ex.Message, ToolTipIcon.Warning);
+        }
+    }
+
+    private void OnHotkeyPressed(object sender, string name)
+    {
+        switch (name)
+        {
+            case "toggle":
+                ToggleEnabled();
+                break;
+            case "game":
+                RunVoiceMeeterAction(_chatMix.NudgeGame);
+                break;
+            case "chat":
+                RunVoiceMeeterAction(_chatMix.NudgeChat);
+                break;
+            case "center":
+                RunVoiceMeeterAction(_chatMix.Center);
+                break;
+        }
+    }
+
+    private void ToggleEnabled()
+    {
+        _chatMix.Enabled = !_chatMix.Enabled;
+        _config.Enabled = _chatMix.Enabled;
+        _config.Save();
+        ShowBalloon(_config.Enabled ? "ChatMix enabled." : "ChatMix disabled.");
+        RebuildMenu();
+    }
+
+    private void RunVoiceMeeterAction(Action action)
+    {
+        try
+        {
+            if (!_voiceMeeter.IsLoggedIn)
+            {
+                TryConnect(showNotification: false);
+            }
+
+            action();
+            RebuildMenu();
+        }
+        catch (Exception ex)
+        {
+            ShowBalloon(ex.Message, ToolTipIcon.Warning);
+        }
+    }
+
+    private void ShowSettings()
+    {
+        using var form = new SettingsForm(_config);
+        if (form.ShowDialog() != DialogResult.OK)
+        {
+            return;
+        }
+
+        _config = form.Config;
+        _chatMix.UpdateConfig(_config);
+        RegisterHotkeys();
+        TryConnect(showNotification: true);
+    }
+
+    private void ShowBalloon(string message, ToolTipIcon icon = ToolTipIcon.Info)
+    {
+        _notifyIcon.BalloonTipTitle = "SonarSlideVB";
+        _notifyIcon.BalloonTipText = message;
+        _notifyIcon.BalloonTipIcon = icon;
+        _notifyIcon.ShowBalloonTip(2500);
+    }
+}
