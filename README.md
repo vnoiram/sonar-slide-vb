@@ -26,7 +26,7 @@ Internally these are saved as VoiceMeeter Remote API parameters such as `Strip[3
 
 Nova 7 dial support is enabled by default. The app looks for SteelSeries `VID 1038` / `PID 2202` HID devices and prioritizes the vendor usage page used by the ChatMix report. Reports are written to `%AppData%\SonarSlideVB\app.log`.
 
-The expected ChatMix report is compatible with the Linux reference implementations: report id `0x2D`, with the second and third bytes representing the Game/Chat balance. The app normalizes that value to `0..100` and applies it to the configured VoiceMeeter Game/Chat targets.
+The expected ChatMix report is compatible with the Linux reference implementations: marker `0x45` on Nova 7 USB dongles, with the following two bytes representing the Game/Chat balance. The app also accepts `0x2D` as an alternate marker seen in related notes. It normalizes that value to `0..100` and applies it to the configured VoiceMeeter Game/Chat targets.
 
 ## Build
 

@@ -14,12 +14,14 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
     private const ushort SteelSeriesVendorId = 0x1038;
     private const ushort Nova7ProductId = 0x2202;
     private const ushort ChatMixUsagePage = 0xFF00;
-    private const byte ChatMixReportId = 0x2D;
+    private const byte Nova7ChatMixReportMarker = 0x45;
+    private const byte AlternateChatMixReportMarker = 0x2D;
 
     private Thread _thread;
     private volatile bool _running;
     private SafeFileHandle _currentHandle;
     private float? _lastPercent;
+    private readonly HashSet<string> _loggedDevicePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     public event EventHandler<Nova7ChatMixEventArgs> MixChanged;
     public event EventHandler<string> StatusChanged;
@@ -38,6 +40,7 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
         }
 
         _running = true;
+        _loggedDevicePaths.Clear();
         _thread = new Thread(() => ReadLoop(config.Nova7PollingIntervalMs))
         {
             IsBackground = true,
@@ -80,7 +83,7 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
             var devices = EnumerateNova7Devices().ToList();
             if (devices.Count == 0)
             {
-                SetStatus("Nova 7 dial: device not found");
+                SetStatus("Nova 7 dial: device not found; see HID inventory in app.log");
                 Thread.Sleep(delay);
                 continue;
             }
@@ -189,20 +192,25 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
             return false;
         }
 
-        if (report[0] == ChatMixReportId)
+        if (IsChatMixReportMarker(report[0]))
         {
             percent = ClampPercent((report[1] + 100f - report[2]) / 2f);
             return true;
         }
 
         // Some Windows HID stacks include an extra leading report-id byte.
-        if (report.Length >= 4 && report[1] == ChatMixReportId)
+        if (report.Length >= 4 && IsChatMixReportMarker(report[1]))
         {
             percent = ClampPercent((report[2] + 100f - report[3]) / 2f);
             return true;
         }
 
         return false;
+    }
+
+    private static bool IsChatMixReportMarker(byte value)
+    {
+        return value == Nova7ChatMixReportMarker || value == AlternateChatMixReportMarker;
     }
 
     private static float ClampPercent(float value)
@@ -227,7 +235,7 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
         StatusChanged?.Invoke(this, status);
     }
 
-    private static IEnumerable<HidDeviceInfo> EnumerateNova7Devices()
+    private IEnumerable<HidDeviceInfo> EnumerateNova7Devices()
     {
         HidD_GetHidGuid(out var hidGuid);
         var infoSet = SetupDiGetClassDevs(ref hidGuid, IntPtr.Zero, IntPtr.Zero, DigcfPresent | DigcfDeviceInterface);
@@ -250,7 +258,7 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
 
                 index++;
                 var path = GetDevicePath(infoSet, interfaceData);
-                if (path == null || !IsNova7Path(path))
+                if (path == null || !IsSteelSeriesPath(path))
                 {
                     continue;
                 }
@@ -258,7 +266,11 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
                 var device = ReadHidInfo(path);
                 if (device != null)
                 {
-                    yield return device;
+                    LogSteelSeriesDevice(device);
+                    if (IsNova7Candidate(device))
+                    {
+                        yield return device;
+                    }
                 }
             }
         }
@@ -335,6 +347,27 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
     {
         var lower = path.ToLowerInvariant();
         return lower.Contains("vid_1038") && lower.Contains("pid_2202");
+    }
+
+    private static bool IsSteelSeriesPath(string path)
+    {
+        return path.ToLowerInvariant().Contains("vid_1038");
+    }
+
+    private static bool IsNova7Candidate(HidDeviceInfo device)
+    {
+        return IsNova7Path(device.Path) || device.UsagePage == ChatMixUsagePage;
+    }
+
+    private void LogSteelSeriesDevice(HidDeviceInfo device)
+    {
+        if (!_loggedDevicePaths.Add(device.Path))
+        {
+            return;
+        }
+
+        AppLog.Info(
+            $"SteelSeries HID candidate path={device.Path}, usagePage=0x{device.UsagePage:X4}, usage=0x{device.Usage:X4}, inputLen={device.InputReportByteLength}, novaMatch={IsNova7Candidate(device)}");
     }
 
     private static string ToHex(byte[] bytes)
