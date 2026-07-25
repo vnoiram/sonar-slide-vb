@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        shell: pwsh
+        run: ./scripts/build.ps1
+
+      - name: Package release
+        shell: pwsh
+        run: |
+          $Version = "${{ github.ref_name }}"
+          $ZipPath = "artifacts/SonarSlideVB-$Version-win-x64.zip"
+          Compress-Archive -Path artifacts/publish/* -DestinationPath $ZipPath -Force
+          "ZIP_PATH=$ZipPath" >> $env:GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonarSlideVB-${{ github.ref_name }}-win-x64
+          path: ${{ env.ZIP_PATH }}
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release create "${{ github.ref_name }}" "$env:ZIP_PATH" --title "SonarSlideVB ${{ github.ref_name }}" --notes "Windows x64 release build."
