@@ -16,27 +16,47 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate and derive version
+        shell: pwsh
+        run: |
+          $Tag = "${{ github.ref_name }}"
+          if ($Tag -notmatch '^v(\d+\.\d+\.\d+)$') {
+              throw "Tag '$Tag' is not a valid vX.Y.Z semantic version tag."
+          }
+          "VERSION=$($Matches[1])" >> $env:GITHUB_ENV
+
       - name: Build
         shell: pwsh
         run: ./scripts/build.ps1
 
-      - name: Package release
+      - name: Package standalone zip
         shell: pwsh
         run: |
-          $Version = "${{ github.ref_name }}"
-          $ZipPath = "artifacts/SonarSlideVB-$Version-win-x64.zip"
+          $ZipPath = "artifacts/SonarSlideVB-${{ github.ref_name }}-win-x64-standalone.zip"
           Compress-Archive -Path artifacts/publish/* -DestinationPath $ZipPath -Force
           "ZIP_PATH=$ZipPath" >> $env:GITHUB_ENV
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          ./scripts/build-installer.ps1 -Version "${{ env.VERSION }}"
+          "INSTALLER_PATH=artifacts/SonarSlideVB-${{ github.ref_name }}-win-x64-installer.exe" >> $env:GITHUB_ENV
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: SonarSlideVB-${{ github.ref_name }}-win-x64
-          path: ${{ env.ZIP_PATH }}
+          path: |
+            ${{ env.ZIP_PATH }}
+            ${{ env.INSTALLER_PATH }}
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          gh release create "${{ github.ref_name }}" "$env:ZIP_PATH" --title "SonarSlideVB ${{ github.ref_name }}" --notes "Windows x64 release build."
+          gh release create "${{ github.ref_name }}" "$env:ZIP_PATH" "$env:INSTALLER_PATH" --title "SonarSlideVB ${{ github.ref_name }}" --notes "Windows x64 release build."
