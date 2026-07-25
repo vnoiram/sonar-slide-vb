@@ -4,7 +4,7 @@ using System.Xml.Serialization;
 
 namespace SonarSlideVB;
 
-internal sealed class AppConfig
+public sealed class AppConfig
 {
     public string DllPath { get; set; } = "";
     public string VoiceMeeterLayout { get; set; } = VoiceMeeterTargets.Banana;
