@@ -9,6 +9,7 @@ namespace SonarSlideVB;
 
 internal sealed class SettingsForm : Form
 {
+    private const decimal StepDisplayScale = 10m;
     private readonly TextBox _dllPath = new();
     private readonly ComboBox _voiceMeeterLayout = new();
     private readonly ComboBox _gameTarget = new();
@@ -64,7 +65,8 @@ internal sealed class SettingsForm : Form
         AddTextRow(layout, 5, "Game hotkey", _gameHotkey);
         AddTextRow(layout, 6, "Chat hotkey", _chatHotkey);
         AddTextRow(layout, 7, "Center hotkey", _centerHotkey);
-        AddNumberRow(layout, 8, "Step", _step, 0.01m, 1m, 0.01m);
+        AddNumberRow(layout, 8, "Step", _step, 0.1m, 10m, 0.1m);
+        _step.DecimalPlaces = 1;
         AddNumberRow(layout, 9, "Min gain dB", _minGain, -100m, 12m, 1m);
         AddNumberRow(layout, 10, "Max gain dB", _maxGain, -100m, 12m, 1m);
 
@@ -176,7 +178,7 @@ internal sealed class SettingsForm : Form
         _gameHotkey.Text = Config.GameHotkey;
         _chatHotkey.Text = Config.ChatHotkey;
         _centerHotkey.Text = Config.CenterHotkey;
-        _step.Value = (decimal)Config.Step;
+        _step.Value = (decimal)Config.Step * StepDisplayScale;
         _minGain.Value = (decimal)Config.MinGainDb;
         _maxGain.Value = (decimal)Config.MaxGainDb;
         _dialMode.Items.Clear();
@@ -202,7 +204,7 @@ internal sealed class SettingsForm : Form
         Config.GameHotkey = _gameHotkey.Text.Trim();
         Config.ChatHotkey = _chatHotkey.Text.Trim();
         Config.CenterHotkey = _centerHotkey.Text.Trim();
-        Config.Step = (float)_step.Value;
+        Config.Step = (float)(_step.Value / StepDisplayScale);
         Config.MinGainDb = (float)_minGain.Value;
         Config.MaxGainDb = (float)_maxGain.Value;
         Config.DialMode = _dialMode.SelectedItem as string ?? DialModes.Nova7;
