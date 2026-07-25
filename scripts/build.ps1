@@ -32,14 +32,14 @@ if ($null -eq $MsBuildPath) {
     throw "MSBuild was not found. Install Visual Studio Build Tools with .NET Framework targeting pack."
 }
 
-& $MsBuildPath $ProjectPath /t:Build /p:Configuration=Release /p:Platform=AnyCPU /nologo
+& $MsBuildPath $ProjectPath /t:Build /p:Configuration=Release /p:Platform=x64 /nologo
 if ($LASTEXITCODE -ne 0) {
     throw "MSBuild failed with exit code $LASTEXITCODE"
 }
 
 New-Item -ItemType Directory -Force -Path $PublishDir | Out-Null
-Copy-Item -Force -Path (Join-Path $RepoRoot "bin\Release\SonarSlideVB.exe") -Destination $PublishDir
-Copy-Item -Force -Path (Join-Path $RepoRoot "bin\Release\SonarSlideVB.exe.config") -Destination $PublishDir -ErrorAction SilentlyContinue
-Copy-Item -Force -Path (Join-Path $RepoRoot "bin\Release\SonarSlideVB.pdb") -Destination $PublishDir -ErrorAction SilentlyContinue
+Copy-Item -Force -Path (Join-Path $RepoRoot "bin\x64\Release\SonarSlideVB.exe") -Destination $PublishDir
+Copy-Item -Force -Path (Join-Path $RepoRoot "bin\x64\Release\SonarSlideVB.exe.config") -Destination $PublishDir -ErrorAction SilentlyContinue
+Copy-Item -Force -Path (Join-Path $RepoRoot "bin\x64\Release\SonarSlideVB.pdb") -Destination $PublishDir -ErrorAction SilentlyContinue
 
 Write-Host "Published to $PublishDir"

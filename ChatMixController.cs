@@ -70,6 +70,16 @@ internal sealed class ChatMixController
         _voiceMeeter.SetParameterFloat(_config.ChatParameter, chatGain);
     }
 
+    public string ProbeGame()
+    {
+        return Probe(_config.GameParameter, _config.MinGainDb);
+    }
+
+    public string ProbeChat()
+    {
+        return Probe(_config.ChatParameter, _config.MinGainDb);
+    }
+
     private void SetPosition(float position)
     {
         _position = Clamp(position, -1f, 1f);
@@ -94,5 +104,13 @@ internal sealed class ChatMixController
         }
 
         return value;
+    }
+
+    private string Probe(string parameter, float probeGain)
+    {
+        var before = _voiceMeeter.GetParameterFloat(parameter);
+        _voiceMeeter.SetParameterFloat(parameter, probeGain);
+        var after = _voiceMeeter.GetParameterFloat(parameter);
+        return $"{parameter}: {before:0.##} dB -> {after:0.##} dB";
     }
 }

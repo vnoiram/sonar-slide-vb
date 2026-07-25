@@ -9,7 +9,9 @@ namespace SonarSlideVB;
 internal sealed class HotkeyManager : NativeWindow, IDisposable
 {
     private const int WmHotkey = 0x0312;
+    private const int WmInput = 0x00FF;
     private readonly Dictionary<int, string> _hotkeyNames = new();
+    private readonly RawInputLogger _rawInput = new();
     private int _nextId = 1;
 
     public event EventHandler<string> HotkeyPressed;
@@ -17,6 +19,7 @@ internal sealed class HotkeyManager : NativeWindow, IDisposable
     public HotkeyManager()
     {
         CreateHandle(new CreateParams());
+        _rawInput.Register(Handle);
     }
 
     public void Register(string name, string hotkey)
@@ -58,6 +61,11 @@ internal sealed class HotkeyManager : NativeWindow, IDisposable
         {
             HotkeyPressed?.Invoke(this, name);
             return;
+        }
+
+        if (m.Msg == WmInput)
+        {
+            _rawInput.LogMessage(m);
         }
 
         base.WndProc(ref m);

@@ -58,6 +58,10 @@ internal sealed class TrayAppContext : ApplicationContext
         menu.Items.Add("Chat +", null, (_, _) => RunVoiceMeeterAction(_chatMix.NudgeChat));
         menu.Items.Add("Center", null, (_, _) => RunVoiceMeeterAction(_chatMix.Center));
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Diagnostics: probe Game", null, (_, _) => ProbeTarget("Game", _chatMix.ProbeGame));
+        menu.Items.Add("Diagnostics: probe Chat", null, (_, _) => ProbeTarget("Chat", _chatMix.ProbeChat));
+        menu.Items.Add($"Open log: {AppLog.LogPath}").Enabled = false;
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Reconnect", null, (_, _) => TryConnect(showNotification: true));
         menu.Items.Add("Settings", null, (_, _) => ShowSettings());
         menu.Items.Add("Exit", null, (_, _) => ExitThread());
@@ -72,6 +76,7 @@ internal sealed class TrayAppContext : ApplicationContext
             _voiceMeeter.Load(_config.DllPath);
             _voiceMeeter.Login();
             _status = "Connected";
+            AppLog.Info($"Connected. layout={_config.VoiceMeeterLayout}, game={_config.GameParameter}, chat={_config.ChatParameter}");
             _chatMix.Apply();
 
             if (showNotification)
@@ -82,6 +87,7 @@ internal sealed class TrayAppContext : ApplicationContext
         catch (Exception ex)
         {
             _status = "Not connected";
+            AppLog.Error("Connect failed", ex);
             if (showNotification)
             {
                 ShowBalloon(ex.Message, ToolTipIcon.Warning);
@@ -105,12 +111,14 @@ internal sealed class TrayAppContext : ApplicationContext
         }
         catch (Exception ex)
         {
+            AppLog.Error("Register hotkey failed", ex);
             ShowBalloon(ex.Message, ToolTipIcon.Warning);
         }
     }
 
     private void OnHotkeyPressed(object sender, string name)
     {
+        AppLog.Info($"Hotkey pressed: {name}");
         switch (name)
         {
             case "toggle":
@@ -151,6 +159,27 @@ internal sealed class TrayAppContext : ApplicationContext
         }
         catch (Exception ex)
         {
+            AppLog.Error("VoiceMeeter action failed", ex);
+            ShowBalloon(ex.Message, ToolTipIcon.Warning);
+        }
+    }
+
+    private void ProbeTarget(string label, Func<string> probe)
+    {
+        try
+        {
+            if (!_voiceMeeter.IsLoggedIn)
+            {
+                TryConnect(showNotification: false);
+            }
+
+            var result = probe();
+            AppLog.Info($"Probe {label}: {result}");
+            ShowBalloon($"{label}: {result}");
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error($"Probe {label} failed", ex);
             ShowBalloon(ex.Message, ToolTipIcon.Warning);
         }
     }

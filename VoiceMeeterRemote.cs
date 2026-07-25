@@ -29,6 +29,7 @@ internal sealed class VoiceMeeterRemote : IDisposable
             {
                 LoadedPath = candidate;
                 BindExports();
+                AppLog.Info($"Loaded VoiceMeeter Remote DLL: {LoadedPath}");
                 return;
             }
         }
@@ -46,6 +47,7 @@ internal sealed class VoiceMeeterRemote : IDisposable
         }
 
         IsLoggedIn = true;
+        AppLog.Info($"VoiceMeeter login succeeded: result={result}");
     }
 
     public void Logout()
@@ -62,6 +64,7 @@ internal sealed class VoiceMeeterRemote : IDisposable
     {
         EnsureLoggedIn();
         var result = _setParameterFloat(parameter, value);
+        AppLog.Info($"SetParameterFloat {parameter}={value:0.###}, result={result}");
         if (result < 0)
         {
             throw new InvalidOperationException($"Failed to set {parameter}: {result}");
@@ -73,6 +76,7 @@ internal sealed class VoiceMeeterRemote : IDisposable
         EnsureLoggedIn();
         var value = 0f;
         var result = _getParameterFloat(parameter, ref value);
+        AppLog.Info($"GetParameterFloat {parameter}={value:0.###}, result={result}");
         if (result < 0)
         {
             throw new InvalidOperationException($"Failed to read {parameter}: {result}");
