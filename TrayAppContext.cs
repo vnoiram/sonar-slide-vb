@@ -9,12 +9,15 @@ internal sealed class TrayAppContext : ApplicationContext
     private readonly NotifyIcon _notifyIcon;
     private readonly VoiceMeeterRemote _voiceMeeter = new();
     private readonly HotkeyManager _hotkeys = new();
+    private readonly Nova7ChatMixMonitor _nova7 = new();
+    private readonly System.Threading.SynchronizationContext _uiContext;
     private AppConfig _config;
     private ChatMixController _chatMix;
     private string _status = "Not connected";
 
     public TrayAppContext()
     {
+        _uiContext = System.Threading.SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         _config = AppConfig.Load();
         _chatMix = new ChatMixController(_voiceMeeter, _config);
 
@@ -27,10 +30,13 @@ internal sealed class TrayAppContext : ApplicationContext
         _notifyIcon.DoubleClick += (_, _) => ShowSettings();
 
         _hotkeys.HotkeyPressed += OnHotkeyPressed;
+        _nova7.MixChanged += OnNova7MixChanged;
+        _nova7.StatusChanged += (_, _) => _uiContext.Post(_ => RebuildMenu(), null);
 
         RebuildMenu();
         TryConnect(showNotification: false);
         RegisterHotkeys();
+        _nova7.Start(_config);
     }
 
     protected override void Dispose(bool disposing)
@@ -40,6 +46,7 @@ internal sealed class TrayAppContext : ApplicationContext
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
             _hotkeys.Dispose();
+            _nova7.Dispose();
             _voiceMeeter.Dispose();
         }
 
@@ -50,6 +57,12 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         var menu = new ContextMenuStrip();
         menu.Items.Add($"Status: {_status}").Enabled = false;
+        menu.Items.Add(_nova7.LastStatus).Enabled = false;
+        if (!string.IsNullOrWhiteSpace(_nova7.LastReport))
+        {
+            menu.Items.Add($"Nova 7 report: {_nova7.LastReport}").Enabled = false;
+        }
+
         menu.Items.Add($"Game: {VoiceMeeterTargets.FindOrCreate(_config.VoiceMeeterLayout, _config.GameParameter)}").Enabled = false;
         menu.Items.Add($"Chat: {VoiceMeeterTargets.FindOrCreate(_config.VoiceMeeterLayout, _config.ChatParameter)}").Enabled = false;
         menu.Items.Add(new ToolStripSeparator());
@@ -60,6 +73,7 @@ internal sealed class TrayAppContext : ApplicationContext
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Diagnostics: probe Game", null, (_, _) => ProbeTarget("Game", _chatMix.ProbeGame));
         menu.Items.Add("Diagnostics: probe Chat", null, (_, _) => ProbeTarget("Chat", _chatMix.ProbeChat));
+        menu.Items.Add("Diagnostics: restart Nova 7 dial", null, (_, _) => _nova7.Start(_config));
         menu.Items.Add($"Open log: {AppLog.LogPath}").Enabled = false;
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Reconnect", null, (_, _) => TryConnect(showNotification: true));
@@ -136,6 +150,15 @@ internal sealed class TrayAppContext : ApplicationContext
         }
     }
 
+    private void OnNova7MixChanged(object sender, Nova7ChatMixEventArgs e)
+    {
+        _uiContext.Post(_ =>
+        {
+            AppLog.Info($"Nova7 mix apply percent={e.Percent:0.#}, previous={(e.PreviousPercent.HasValue ? e.PreviousPercent.Value.ToString("0.#") : "none")}, report={e.RawReport}");
+            RunVoiceMeeterAction(() => _chatMix.SetMixPercent(e.Percent));
+        }, null);
+    }
+
     private void ToggleEnabled()
     {
         _chatMix.Enabled = !_chatMix.Enabled;
@@ -195,6 +218,7 @@ internal sealed class TrayAppContext : ApplicationContext
         _config = form.Config;
         _chatMix.UpdateConfig(_config);
         RegisterHotkeys();
+        _nova7.Start(_config);
         TryConnect(showNotification: true);
     }
 

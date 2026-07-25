@@ -18,6 +18,9 @@ internal sealed class AppConfig
     public float MinGainDb { get; set; } = -60f;
     public float MaxGainDb { get; set; } = 0f;
     public bool Enabled { get; set; } = true;
+    public bool EnableNova7Dial { get; set; } = true;
+    public bool Nova7AutoDetect { get; set; } = true;
+    public int Nova7PollingIntervalMs { get; set; } = 250;
     public bool StartWithWindows { get; set; }
 
     public static string ConfigDirectory =>

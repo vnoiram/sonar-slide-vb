@@ -54,6 +54,12 @@ internal sealed class ChatMixController
         SetPosition(0f);
     }
 
+    public void SetMixPercent(float percent)
+    {
+        var normalized = Clamp(percent, 0f, 100f);
+        SetPosition((normalized - 50f) / 50f);
+    }
+
     public void Apply()
     {
         if (!_config.Enabled)

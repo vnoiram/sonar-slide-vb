@@ -47,6 +47,7 @@
     <Compile Include="AppLog.cs" />
     <Compile Include="ChatMixController.cs" />
     <Compile Include="HotkeyManager.cs" />
+    <Compile Include="Nova7ChatMixMonitor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="RawInputLogger.cs" />
     <Compile Include="SettingsForm.cs" />

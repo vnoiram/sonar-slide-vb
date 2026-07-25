@@ -22,6 +22,12 @@ Default layout is VoiceMeeter Banana:
 
 Internally these are saved as VoiceMeeter Remote API parameters such as `Strip[3].Gain` and `Strip[4].Gain`.
 
+## Nova 7 dial
+
+Nova 7 dial support is enabled by default. The app looks for SteelSeries `VID 1038` / `PID 2202` HID devices and prioritizes the vendor usage page used by the ChatMix report. Reports are written to `%AppData%\SonarSlideVB\app.log`.
+
+The expected ChatMix report is compatible with the Linux reference implementations: report id `0x2D`, with the second and third bytes representing the Game/Chat balance. The app normalizes that value to `0..100` and applies it to the configured VoiceMeeter Game/Chat targets.
+
 ## Build
 
 Review `scripts/build.ps1`, then run it in PowerShell. The script uses Visual Studio MSBuild and does not require the .NET SDK command-line tools.
