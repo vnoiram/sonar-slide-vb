@@ -151,23 +151,51 @@ internal sealed class VoiceMeeterRemote : IDisposable
     {
         if (!string.IsNullOrWhiteSpace(configuredPath))
         {
-            yield return configuredPath;
+            var fullPath = GetExistingFullPath(configuredPath);
+            if (fullPath != null)
+            {
+                yield return fullPath;
+            }
         }
 
         var fileName = Environment.Is64BitProcess ? "VoicemeeterRemote64.dll" : "VoicemeeterRemote.dll";
-        yield return fileName;
-
         var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
 
         if (!string.IsNullOrWhiteSpace(programFilesX86))
         {
-            yield return Path.Combine(programFilesX86, "VB", "Voicemeeter", fileName);
+            var candidate = Path.Combine(programFilesX86, "VB", "Voicemeeter", fileName);
+            if (File.Exists(candidate))
+            {
+                yield return candidate;
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(programFiles))
         {
-            yield return Path.Combine(programFiles, "VB", "Voicemeeter", fileName);
+            var candidate = Path.Combine(programFiles, "VB", "Voicemeeter", fileName);
+            if (File.Exists(candidate))
+            {
+                yield return candidate;
+            }
+        }
+    }
+
+    private static string GetExistingFullPath(string path)
+    {
+        try
+        {
+            if (!Path.IsPathRooted(path))
+            {
+                return null;
+            }
+
+            var fullPath = Path.GetFullPath(path);
+            return File.Exists(fullPath) ? fullPath : null;
+        }
+        catch
+        {
+            return null;
         }
     }
 
