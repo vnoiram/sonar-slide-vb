@@ -22,6 +22,7 @@ public sealed class AppConfig
     public bool EnableNova7Dial { get; set; } = true;
     public bool Nova7AutoDetect { get; set; } = true;
     public int Nova7PollingIntervalMs { get; set; } = 250;
+    public int Nova7RetryCount { get; set; } = 0;
     public bool StartWithWindows { get; set; }
 
     public static string ConfigDirectory =>
@@ -75,6 +76,7 @@ public sealed class AppConfig
         }
 
         EnableNova7Dial = DialMode == DialModes.Nova7;
+        Nova7RetryCount = Math.Max(0, Nova7RetryCount);
     }
 }
 

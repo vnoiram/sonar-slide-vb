@@ -22,6 +22,7 @@ internal sealed class SettingsForm : Form
     private readonly NumericUpDown _maxGain = new();
     private readonly ComboBox _dialMode = new();
     private readonly NumericUpDown _nova7PollingInterval = new();
+    private readonly NumericUpDown _nova7RetryCount = new();
     private readonly CheckBox _startWithWindows = new();
     private bool _loading;
 
@@ -48,7 +49,7 @@ internal sealed class SettingsForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 3,
-            RowCount = 15,
+            RowCount = 16,
             Padding = new Padding(12),
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
@@ -70,10 +71,11 @@ internal sealed class SettingsForm : Form
         AddComboRow(layout, 11, "Dial mode", _dialMode);
 
         AddNumberRow(layout, 12, "Nova 7 retry ms", _nova7PollingInterval, 100m, 5000m, 50m);
+        AddNumberRow(layout, 13, "Nova 7 retry count", _nova7RetryCount, 0m, 1000m, 1m);
 
         _startWithWindows.Text = "Start with Windows";
         _startWithWindows.AutoSize = true;
-        layout.Controls.Add(_startWithWindows, 1, 13);
+        layout.Controls.Add(_startWithWindows, 1, 14);
         layout.SetColumnSpan(_startWithWindows, 2);
 
         var buttons = new FlowLayoutPanel
@@ -87,7 +89,7 @@ internal sealed class SettingsForm : Form
         buttons.Controls.Add(save);
         buttons.Controls.Add(cancel);
 
-        layout.Controls.Add(buttons, 0, 14);
+        layout.Controls.Add(buttons, 0, 15);
         layout.SetColumnSpan(buttons, 3);
 
         Controls.Add(layout);
@@ -185,6 +187,7 @@ internal sealed class SettingsForm : Form
 
         _dialMode.SelectedItem = DialModes.IsSupported(Config.DialMode) ? Config.DialMode : DialModes.Nova7;
         _nova7PollingInterval.Value = Config.Nova7PollingIntervalMs;
+        _nova7RetryCount.Value = Config.Nova7RetryCount;
         _startWithWindows.Checked = Config.StartWithWindows;
         _loading = false;
     }
@@ -204,6 +207,7 @@ internal sealed class SettingsForm : Form
         Config.MaxGainDb = (float)_maxGain.Value;
         Config.DialMode = _dialMode.SelectedItem as string ?? DialModes.Nova7;
         Config.Nova7PollingIntervalMs = (int)_nova7PollingInterval.Value;
+        Config.Nova7RetryCount = (int)_nova7RetryCount.Value;
         Config.StartWithWindows = _startWithWindows.Checked;
         Config.Save();
         StartupRegistry.SetEnabled(Config.StartWithWindows);
@@ -263,6 +267,7 @@ internal sealed class SettingsForm : Form
             EnableNova7Dial = source.EnableNova7Dial,
             Nova7AutoDetect = source.Nova7AutoDetect,
             Nova7PollingIntervalMs = source.Nova7PollingIntervalMs,
+            Nova7RetryCount = source.Nova7RetryCount,
             StartWithWindows = source.StartWithWindows,
         };
     }

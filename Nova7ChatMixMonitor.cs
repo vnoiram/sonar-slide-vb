@@ -48,7 +48,7 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
 
         _running = true;
         _loggedDevicePaths.Clear();
-        _thread = new Thread(() => ReadLoop(config.Nova7PollingIntervalMs))
+        _thread = new Thread(() => ReadLoop(config.Nova7PollingIntervalMs, config.Nova7RetryCount))
         {
             IsBackground = true,
             Name = "Nova7ChatMixMonitor",
@@ -82,19 +82,25 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
         Stop();
     }
 
-    private void ReadLoop(int retryDelayMs)
+    private void ReadLoop(int retryDelayMs, int retryCount)
     {
         var delay = Math.Max(100, retryDelayMs);
+        var failures = 0;
         while (_running)
         {
             var devices = EnumerateNova7Devices().ToList();
             if (devices.Count == 0)
             {
                 SetStatus("Nova 7 dial: device not found; see HID inventory in app.log");
-                Thread.Sleep(delay);
+                if (!WaitForRetry(delay, retryCount, ref failures, "device not found"))
+                {
+                    break;
+                }
+
                 continue;
             }
 
+            var reading = false;
             foreach (var device in devices.OrderByDescending(device => device.UsagePage == ChatMixUsagePage))
             {
                 if (!_running)
@@ -104,10 +110,34 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
 
                 if (ReadDevice(device, delay))
                 {
+                    failures = 0;
+                    reading = true;
                     break;
                 }
             }
+
+            if (!reading && !WaitForRetry(delay, retryCount, ref failures, "open/read failed"))
+            {
+                break;
+            }
         }
+    }
+
+    private bool WaitForRetry(int delay, int retryCount, ref int failures, string reason)
+    {
+        if (retryCount > 0)
+        {
+            failures++;
+            if (failures >= retryCount)
+            {
+                _running = false;
+                SetStatus($"Nova 7 dial: {reason}; stopped after {failures} retries");
+                return false;
+            }
+        }
+
+        Thread.Sleep(delay);
+        return _running;
     }
 
     private bool ReadDevice(HidDeviceInfo device, int retryDelayMs)
@@ -159,14 +189,12 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
             {
                 AppLog.Error("Nova7 read failed", ex);
                 SetStatus("Nova 7 dial: read failed");
-                Thread.Sleep(retryDelayMs);
                 return false;
             }
             catch (Exception ex)
             {
                 AppLog.Error("Nova7 read crashed", ex);
                 SetStatus("Nova 7 dial: read crashed");
-                Thread.Sleep(retryDelayMs);
                 return false;
             }
         }
