@@ -18,6 +18,7 @@ public sealed class AppConfig
     public float MinGainDb { get; set; } = -60f;
     public float MaxGainDb { get; set; } = 0f;
     public bool Enabled { get; set; } = true;
+    public string DialMode { get; set; } = "";
     public bool EnableNova7Dial { get; set; } = true;
     public bool Nova7AutoDetect { get; set; } = true;
     public int Nova7PollingIntervalMs { get; set; } = 250;
@@ -34,28 +35,59 @@ public sealed class AppConfig
         {
             if (!File.Exists(ConfigPath))
             {
-                return new AppConfig();
+                var config = new AppConfig();
+                config.Normalize();
+                return config;
             }
 
             using (var stream = File.OpenRead(ConfigPath))
             {
                 var serializer = new XmlSerializer(typeof(AppConfig));
-                return serializer.Deserialize(stream) as AppConfig ?? new AppConfig();
+                var config = serializer.Deserialize(stream) as AppConfig ?? new AppConfig();
+                config.Normalize();
+                return config;
             }
         }
         catch
         {
-            return new AppConfig();
+            var config = new AppConfig();
+            config.Normalize();
+            return config;
         }
     }
 
     public void Save()
     {
+        Normalize();
         Directory.CreateDirectory(ConfigDirectory);
         using (var stream = File.Create(ConfigPath))
         {
             var serializer = new XmlSerializer(typeof(AppConfig));
             serializer.Serialize(stream, this);
         }
+    }
+
+    public void Normalize()
+    {
+        if (!DialModes.IsSupported(DialMode))
+        {
+            DialMode = EnableNova7Dial ? DialModes.Nova7 : DialModes.Off;
+        }
+
+        EnableNova7Dial = DialMode == DialModes.Nova7;
+    }
+}
+
+internal static class DialModes
+{
+    public const string Nova7 = "Nova 7";
+    public const string Custom = "Custom";
+    public const string Off = "Off";
+
+    public static string[] Options { get; } = { Nova7, Custom, Off };
+
+    public static bool IsSupported(string value)
+    {
+        return value == Nova7 || value == Custom || value == Off;
     }
 }

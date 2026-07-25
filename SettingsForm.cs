@@ -20,8 +20,7 @@ internal sealed class SettingsForm : Form
     private readonly NumericUpDown _step = new();
     private readonly NumericUpDown _minGain = new();
     private readonly NumericUpDown _maxGain = new();
-    private readonly CheckBox _enableNova7Dial = new();
-    private readonly CheckBox _nova7AutoDetect = new();
+    private readonly ComboBox _dialMode = new();
     private readonly NumericUpDown _nova7PollingInterval = new();
     private readonly CheckBox _startWithWindows = new();
     private bool _loading;
@@ -31,6 +30,7 @@ internal sealed class SettingsForm : Form
     public SettingsForm(AppConfig config)
     {
         Config = Copy(config);
+        Config.Normalize();
         Text = "SonarSlideVB Settings";
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -48,7 +48,7 @@ internal sealed class SettingsForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 3,
-            RowCount = 16,
+            RowCount = 15,
             Padding = new Padding(12),
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
@@ -67,18 +67,12 @@ internal sealed class SettingsForm : Form
         AddNumberRow(layout, 9, "Min gain dB", _minGain, -100m, 12m, 1m);
         AddNumberRow(layout, 10, "Max gain dB", _maxGain, -100m, 12m, 1m);
 
-        _enableNova7Dial.Text = "Enable Nova 7 dial";
-        layout.Controls.Add(_enableNova7Dial, 1, 11);
-        layout.SetColumnSpan(_enableNova7Dial, 2);
+        AddComboRow(layout, 11, "Dial mode", _dialMode);
 
-        _nova7AutoDetect.Text = "Nova 7 auto-detect";
-        layout.Controls.Add(_nova7AutoDetect, 1, 12);
-        layout.SetColumnSpan(_nova7AutoDetect, 2);
-
-        AddNumberRow(layout, 13, "Nova 7 retry ms", _nova7PollingInterval, 100m, 5000m, 50m);
+        AddNumberRow(layout, 12, "Nova 7 retry ms", _nova7PollingInterval, 100m, 5000m, 50m);
 
         _startWithWindows.Text = "Start with Windows";
-        layout.Controls.Add(_startWithWindows, 1, 14);
+        layout.Controls.Add(_startWithWindows, 1, 13);
         layout.SetColumnSpan(_startWithWindows, 2);
 
         var buttons = new FlowLayoutPanel
@@ -92,7 +86,7 @@ internal sealed class SettingsForm : Form
         buttons.Controls.Add(save);
         buttons.Controls.Add(cancel);
 
-        layout.Controls.Add(buttons, 0, 15);
+        layout.Controls.Add(buttons, 0, 14);
         layout.SetColumnSpan(buttons, 3);
 
         Controls.Add(layout);
@@ -182,8 +176,13 @@ internal sealed class SettingsForm : Form
         _step.Value = (decimal)Config.Step;
         _minGain.Value = (decimal)Config.MinGainDb;
         _maxGain.Value = (decimal)Config.MaxGainDb;
-        _enableNova7Dial.Checked = Config.EnableNova7Dial;
-        _nova7AutoDetect.Checked = Config.Nova7AutoDetect;
+        _dialMode.Items.Clear();
+        foreach (var mode in DialModes.Options)
+        {
+            _dialMode.Items.Add(mode);
+        }
+
+        _dialMode.SelectedItem = DialModes.IsSupported(Config.DialMode) ? Config.DialMode : DialModes.Nova7;
         _nova7PollingInterval.Value = Config.Nova7PollingIntervalMs;
         _startWithWindows.Checked = Config.StartWithWindows;
         _loading = false;
@@ -202,8 +201,7 @@ internal sealed class SettingsForm : Form
         Config.Step = (float)_step.Value;
         Config.MinGainDb = (float)_minGain.Value;
         Config.MaxGainDb = (float)_maxGain.Value;
-        Config.EnableNova7Dial = _enableNova7Dial.Checked;
-        Config.Nova7AutoDetect = _nova7AutoDetect.Checked;
+        Config.DialMode = _dialMode.SelectedItem as string ?? DialModes.Nova7;
         Config.Nova7PollingIntervalMs = (int)_nova7PollingInterval.Value;
         Config.StartWithWindows = _startWithWindows.Checked;
         Config.Save();
@@ -260,6 +258,7 @@ internal sealed class SettingsForm : Form
             MinGainDb = source.MinGainDb,
             MaxGainDb = source.MaxGainDb,
             Enabled = source.Enabled,
+            DialMode = source.DialMode,
             EnableNova7Dial = source.EnableNova7Dial,
             Nova7AutoDetect = source.Nova7AutoDetect,
             Nova7PollingIntervalMs = source.Nova7PollingIntervalMs,

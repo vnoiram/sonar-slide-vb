@@ -32,10 +32,17 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
     public void Start(AppConfig config)
     {
         Stop();
+        config.Normalize();
 
-        if (!config.EnableNova7Dial)
+        if (config.DialMode == DialModes.Off)
         {
             SetStatus("Nova 7 dial: disabled");
+            return;
+        }
+
+        if (config.DialMode == DialModes.Custom)
+        {
+            SetStatus("Custom dial: capture only; see app.log");
             return;
         }
 
