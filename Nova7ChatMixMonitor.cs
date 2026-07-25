@@ -153,13 +153,13 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
         {
             if (handle.IsInvalid)
             {
-                AppLog.Info($"Nova7 open failed path={device.Path}, error={Marshal.GetLastWin32Error()}");
+                AppLog.Info($"Nova7 open failed usagePage=0x{device.UsagePage:X4}, usage=0x{device.Usage:X4}, error={Marshal.GetLastWin32Error()}");
                 return false;
             }
 
             _currentHandle = handle;
             SetStatus($"Nova 7 dial: reading usagePage=0x{device.UsagePage:X4}, usage=0x{device.Usage:X4}");
-            AppLog.Info($"Nova7 reading path={device.Path}, usagePage=0x{device.UsagePage:X4}, usage=0x{device.Usage:X4}, inputLen={device.InputReportByteLength}");
+            AppLog.Info($"Nova7 reading usagePage=0x{device.UsagePage:X4}, usage=0x{device.Usage:X4}, inputLen={device.InputReportByteLength}");
 
             try
             {
@@ -206,7 +206,7 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
     {
         var report = buffer.Take(length).ToArray();
         LastReport = ToHex(report);
-        AppLog.Info($"Nova7 report usagePage=0x{device.UsagePage:X4}, len={length}, data={LastReport}");
+        AppLog.Info($"Nova7 report usagePage=0x{device.UsagePage:X4}, usage=0x{device.Usage:X4}, len={length}");
 
         if (!TryParseMixPercent(report, out var percent))
         {
@@ -402,7 +402,7 @@ internal sealed class Nova7ChatMixMonitor : IDisposable
         }
 
         AppLog.Info(
-            $"SteelSeries HID candidate path={device.Path}, usagePage=0x{device.UsagePage:X4}, usage=0x{device.Usage:X4}, inputLen={device.InputReportByteLength}, novaMatch={IsNova7Candidate(device)}");
+            $"SteelSeries HID candidate usagePage=0x{device.UsagePage:X4}, usage=0x{device.Usage:X4}, inputLen={device.InputReportByteLength}, novaMatch={IsNova7Candidate(device)}");
     }
 
     private static string ToHex(byte[] bytes)

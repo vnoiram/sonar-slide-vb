@@ -155,7 +155,7 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         _uiContext.Post(_ =>
         {
-            AppLog.Info($"Nova7 mix apply percent={e.Percent:0.#}, previous={(e.PreviousPercent.HasValue ? e.PreviousPercent.Value.ToString("0.#") : "none")}, report={e.RawReport}");
+            AppLog.Info($"Nova7 mix apply percent={e.Percent:0.#}, previous={(e.PreviousPercent.HasValue ? e.PreviousPercent.Value.ToString("0.#") : "none")}");
             RunVoiceMeeterAction(() => _chatMix.SetMixPercent(e.Percent));
         }, null);
     }
