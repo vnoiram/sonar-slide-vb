@@ -7,6 +7,7 @@ namespace SonarSlideVB;
 internal sealed class TrayAppContext : ApplicationContext
 {
     private readonly NotifyIcon _notifyIcon;
+    private readonly Icon _appIcon;
     private readonly VoiceMeeterRemote _voiceMeeter = new();
     private readonly HotkeyManager _hotkeys = new();
     private readonly Nova7ChatMixMonitor _nova7 = new();
@@ -20,10 +21,11 @@ internal sealed class TrayAppContext : ApplicationContext
         _uiContext = System.Threading.SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         _config = AppConfig.Load();
         _chatMix = new ChatMixController(_voiceMeeter, _config);
+        _appIcon = LoadAppIcon();
 
         _notifyIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = _appIcon,
             Visible = true,
             Text = "SonarSlideVB",
         };
@@ -45,6 +47,7 @@ internal sealed class TrayAppContext : ApplicationContext
         {
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
+            _appIcon.Dispose();
             _hotkeys.Dispose();
             _nova7.Dispose();
             _voiceMeeter.Dispose();
@@ -223,5 +226,17 @@ internal sealed class TrayAppContext : ApplicationContext
         _notifyIcon.BalloonTipText = message;
         _notifyIcon.BalloonTipIcon = icon;
         _notifyIcon.ShowBalloonTip(2500);
+    }
+
+    private static Icon LoadAppIcon()
+    {
+        try
+        {
+            return Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? (Icon)SystemIcons.Application.Clone();
+        }
+        catch
+        {
+            return (Icon)SystemIcons.Application.Clone();
+        }
     }
 }

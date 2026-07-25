@@ -1,5 +1,7 @@
 # SonarSlideVB
 
+<img src="assets/app-icon.png" alt="SonarSlideVB icon" width="128">
+
 VoiceMeeter Banana/Potato inside parameters are controlled from a small Windows tray app to mimic SteelSeries Nova 7 style ChatMix.
 
 ## Behavior

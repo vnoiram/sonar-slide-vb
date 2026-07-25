@@ -9,6 +9,7 @@
     <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
     <LangVersion>latest</LangVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>assets\app-icon.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <OutputPath>bin\Debug\</OutputPath>
@@ -56,6 +57,8 @@
     <Compile Include="VoiceMeeterTarget.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="assets\app-icon.ico" />
+    <Content Include="assets\app-icon.png" />
     <None Include="app.manifest" />
     <None Include="README.md" />
     <None Include="scripts\build.ps1" />
