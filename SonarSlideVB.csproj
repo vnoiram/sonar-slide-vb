@@ -62,6 +62,8 @@
     <None Include="app.manifest" />
     <None Include="README.md" />
     <None Include="scripts\build.ps1" />
+    <None Include="scripts\build-installer.ps1" />
+    <None Include="installer\SonarSlideVB.iss" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
