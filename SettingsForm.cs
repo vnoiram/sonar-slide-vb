@@ -72,6 +72,7 @@ internal sealed class SettingsForm : Form
         AddNumberRow(layout, 12, "Nova 7 retry ms", _nova7PollingInterval, 100m, 5000m, 50m);
 
         _startWithWindows.Text = "Start with Windows";
+        _startWithWindows.AutoSize = true;
         layout.Controls.Add(_startWithWindows, 1, 13);
         layout.SetColumnSpan(_startWithWindows, 2);
 
