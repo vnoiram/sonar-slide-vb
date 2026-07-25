@@ -53,6 +53,15 @@ Review `scripts/build.ps1`, then run it in PowerShell. The script uses Visual St
 
 The release output is written to `artifacts\publish`.
 
+## Install
+
+Each tagged release provides two Windows x64 assets:
+
+- `SonarSlideVB-vX.Y.Z-win-x64-installer.exe`: installs per-user to `%LocalAppData%\Programs\SonarSlideVB` without requiring administrator privileges, and adds a Start Menu shortcut.
+- `SonarSlideVB-vX.Y.Z-win-x64-standalone.zip`: the portable build, unchanged; extract and run `SonarSlideVB.exe` directly.
+
+Both contain the same application build. User configuration and logs are stored under `%AppData%\SonarSlideVB` regardless of which one you use.
+
 ## VoiceMeeter DLL
 
 If the app cannot find `VoicemeeterRemote64.dll`, open Settings from the tray icon and select the DLL manually.
