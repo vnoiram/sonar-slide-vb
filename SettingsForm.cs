@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
@@ -9,8 +10,9 @@ namespace SonarSlideVB;
 internal sealed class SettingsForm : Form
 {
     private readonly TextBox _dllPath = new();
-    private readonly TextBox _gameParameter = new();
-    private readonly TextBox _chatParameter = new();
+    private readonly ComboBox _voiceMeeterLayout = new();
+    private readonly ComboBox _gameTarget = new();
+    private readonly ComboBox _chatTarget = new();
     private readonly TextBox _toggleHotkey = new();
     private readonly TextBox _gameHotkey = new();
     private readonly TextBox _chatHotkey = new();
@@ -20,6 +22,7 @@ internal sealed class SettingsForm : Form
     private readonly NumericUpDown _maxGain = new();
     private readonly CheckBox _enabled = new();
     private readonly CheckBox _startWithWindows = new();
+    private bool _loading;
 
     public AppConfig Config { get; private set; }
 
@@ -43,7 +46,7 @@ internal sealed class SettingsForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 3,
-            RowCount = 13,
+            RowCount = 14,
             Padding = new Padding(12),
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
@@ -51,22 +54,23 @@ internal sealed class SettingsForm : Form
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
 
         AddTextRow(layout, 0, "Remote DLL", _dllPath, BrowseDll);
-        AddTextRow(layout, 1, "Game parameter", _gameParameter);
-        AddTextRow(layout, 2, "Chat parameter", _chatParameter);
-        AddTextRow(layout, 3, "Toggle hotkey", _toggleHotkey);
-        AddTextRow(layout, 4, "Game hotkey", _gameHotkey);
-        AddTextRow(layout, 5, "Chat hotkey", _chatHotkey);
-        AddTextRow(layout, 6, "Center hotkey", _centerHotkey);
-        AddNumberRow(layout, 7, "Step", _step, 0.01m, 1m, 0.01m);
-        AddNumberRow(layout, 8, "Min gain dB", _minGain, -100m, 12m, 1m);
-        AddNumberRow(layout, 9, "Max gain dB", _maxGain, -100m, 12m, 1m);
+        AddComboRow(layout, 1, "VoiceMeeter layout", _voiceMeeterLayout);
+        AddComboRow(layout, 2, "Game side", _gameTarget);
+        AddComboRow(layout, 3, "Chat side", _chatTarget);
+        AddTextRow(layout, 4, "Toggle hotkey", _toggleHotkey);
+        AddTextRow(layout, 5, "Game hotkey", _gameHotkey);
+        AddTextRow(layout, 6, "Chat hotkey", _chatHotkey);
+        AddTextRow(layout, 7, "Center hotkey", _centerHotkey);
+        AddNumberRow(layout, 8, "Step", _step, 0.01m, 1m, 0.01m);
+        AddNumberRow(layout, 9, "Min gain dB", _minGain, -100m, 12m, 1m);
+        AddNumberRow(layout, 10, "Max gain dB", _maxGain, -100m, 12m, 1m);
 
         _enabled.Text = "ChatMix enabled";
-        layout.Controls.Add(_enabled, 1, 10);
+        layout.Controls.Add(_enabled, 1, 11);
         layout.SetColumnSpan(_enabled, 2);
 
         _startWithWindows.Text = "Start with Windows";
-        layout.Controls.Add(_startWithWindows, 1, 11);
+        layout.Controls.Add(_startWithWindows, 1, 12);
         layout.SetColumnSpan(_startWithWindows, 2);
 
         var buttons = new FlowLayoutPanel
@@ -80,7 +84,7 @@ internal sealed class SettingsForm : Form
         buttons.Controls.Add(save);
         buttons.Controls.Add(cancel);
 
-        layout.Controls.Add(buttons, 0, 12);
+        layout.Controls.Add(buttons, 0, 13);
         layout.SetColumnSpan(buttons, 3);
 
         Controls.Add(layout);
@@ -89,6 +93,8 @@ internal sealed class SettingsForm : Form
         {
             box.KeyDown += CaptureHotkey;
         }
+
+        _voiceMeeterLayout.SelectedIndexChanged += (_, _) => LoadTargetChoices(resetToLayoutDefault: !_loading);
     }
 
     private static void AddTextRow(TableLayoutPanel layout, int row, string label, TextBox textBox, Action browse = null)
@@ -107,6 +113,16 @@ internal sealed class SettingsForm : Form
         var button = new Button { Text = "Browse", Width = 75, Anchor = AnchorStyles.Right };
         button.Click += (_, _) => browse();
         layout.Controls.Add(button, 2, row);
+    }
+
+    private static void AddComboRow(TableLayoutPanel layout, int row, string label, ComboBox comboBox)
+    {
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+        layout.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left }, 0, row);
+        comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        comboBox.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+        layout.Controls.Add(comboBox, 1, row);
+        layout.SetColumnSpan(comboBox, 2);
     }
 
     private static void AddNumberRow(TableLayoutPanel layout, int row, string label, NumericUpDown input, decimal minimum, decimal maximum, decimal increment)
@@ -139,9 +155,18 @@ internal sealed class SettingsForm : Form
 
     private void LoadConfig()
     {
+        _loading = true;
         _dllPath.Text = Config.DllPath;
-        _gameParameter.Text = Config.GameParameter;
-        _chatParameter.Text = Config.ChatParameter;
+        _voiceMeeterLayout.Items.Clear();
+        foreach (var layout in VoiceMeeterTargets.Layouts)
+        {
+            _voiceMeeterLayout.Items.Add(layout);
+        }
+
+        _voiceMeeterLayout.SelectedItem = VoiceMeeterTargets.Layouts.Contains(Config.VoiceMeeterLayout)
+            ? Config.VoiceMeeterLayout
+            : VoiceMeeterTargets.Banana;
+        LoadTargetChoices(resetToLayoutDefault: false);
         _toggleHotkey.Text = Config.ToggleHotkey;
         _gameHotkey.Text = Config.GameHotkey;
         _chatHotkey.Text = Config.ChatHotkey;
@@ -151,13 +176,15 @@ internal sealed class SettingsForm : Form
         _maxGain.Value = (decimal)Config.MaxGainDb;
         _enabled.Checked = Config.Enabled;
         _startWithWindows.Checked = Config.StartWithWindows;
+        _loading = false;
     }
 
     private void SaveConfig()
     {
         Config.DllPath = _dllPath.Text.Trim();
-        Config.GameParameter = _gameParameter.Text.Trim();
-        Config.ChatParameter = _chatParameter.Text.Trim();
+        Config.VoiceMeeterLayout = _voiceMeeterLayout.SelectedItem as string ?? VoiceMeeterTargets.Banana;
+        Config.GameParameter = GetSelectedParameter(_gameTarget, Config.GameParameter);
+        Config.ChatParameter = GetSelectedParameter(_chatTarget, Config.ChatParameter);
         Config.ToggleHotkey = _toggleHotkey.Text.Trim();
         Config.GameHotkey = _gameHotkey.Text.Trim();
         Config.ChatHotkey = _chatHotkey.Text.Trim();
@@ -210,6 +237,7 @@ internal sealed class SettingsForm : Form
         return new AppConfig
         {
             DllPath = source.DllPath,
+            VoiceMeeterLayout = source.VoiceMeeterLayout,
             GameParameter = source.GameParameter,
             ChatParameter = source.ChatParameter,
             ToggleHotkey = source.ToggleHotkey,
@@ -222,6 +250,71 @@ internal sealed class SettingsForm : Form
             Enabled = source.Enabled,
             StartWithWindows = source.StartWithWindows,
         };
+    }
+
+    private void LoadTargetChoices(bool resetToLayoutDefault)
+    {
+        var layout = _voiceMeeterLayout.SelectedItem as string ?? VoiceMeeterTargets.Banana;
+        var gameTarget = resetToLayoutDefault
+            ? VoiceMeeterTargets.GetDefaultGameTarget(layout)
+            : FindTargetWithoutLeakingOtherLayoutDefaults(layout, Config.GameParameter, VoiceMeeterTargets.GetDefaultGameTarget(layout));
+        var chatTarget = resetToLayoutDefault
+            ? VoiceMeeterTargets.GetDefaultChatTarget(layout)
+            : FindTargetWithoutLeakingOtherLayoutDefaults(layout, Config.ChatParameter, VoiceMeeterTargets.GetDefaultChatTarget(layout));
+
+        LoadTargetCombo(_gameTarget, gameTarget, layout);
+        LoadTargetCombo(_chatTarget, chatTarget, layout);
+    }
+
+    private static VoiceMeeterTarget FindTargetWithoutLeakingOtherLayoutDefaults(string layout, string parameter, VoiceMeeterTarget fallback)
+    {
+        var target = VoiceMeeterTargets.FindOrCreate(layout, parameter);
+        if (target.DisplayName.StartsWith("Custom:") && IsKnownBuiltInParameter(parameter))
+        {
+            return fallback;
+        }
+
+        return target;
+    }
+
+    private static bool IsKnownBuiltInParameter(string parameter)
+    {
+        return VoiceMeeterTargets.Layouts
+            .SelectMany(VoiceMeeterTargets.GetTargets)
+            .Any(target => target.Parameter == parameter);
+    }
+
+    private static void LoadTargetCombo(ComboBox comboBox, VoiceMeeterTarget selectedTarget, string layout)
+    {
+        comboBox.Items.Clear();
+        var selectedIncluded = false;
+        foreach (var target in VoiceMeeterTargets.GetTargets(layout))
+        {
+            comboBox.Items.Add(target);
+            if (target.Parameter == selectedTarget.Parameter)
+            {
+                selectedIncluded = true;
+            }
+        }
+
+        if (!selectedIncluded)
+        {
+            comboBox.Items.Add(selectedTarget);
+        }
+
+        foreach (var item in comboBox.Items)
+        {
+            if (item is VoiceMeeterTarget target && target.Parameter == selectedTarget.Parameter)
+            {
+                comboBox.SelectedItem = item;
+                return;
+            }
+        }
+    }
+
+    private static string GetSelectedParameter(ComboBox comboBox, string fallback)
+    {
+        return comboBox.SelectedItem is VoiceMeeterTarget target ? target.Parameter : fallback;
     }
 }
 

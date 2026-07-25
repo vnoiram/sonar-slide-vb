@@ -13,7 +13,14 @@ VoiceMeeter Banana/Potato inside parameters are controlled from a small Windows 
   - Chat side: `Ctrl+Alt+Right`
   - Center: `Ctrl+Alt+Down`
 
-The default targets are `Strip[3].Gain` for Game and `Strip[4].Gain` for Chat. Change these in Settings to match your VoiceMeeter layout.
+The Settings window shows VoiceMeeter-style names instead of Remote API parameter names. Select the layout first, then choose Game and Chat from the dropdowns.
+
+Default layout is VoiceMeeter Banana:
+
+- Game: `Voicemeeter Input`
+- Chat: `Voicemeeter AUX Input`
+
+Internally these are saved as VoiceMeeter Remote API parameters such as `Strip[3].Gain` and `Strip[4].Gain`.
 
 ## Build
 

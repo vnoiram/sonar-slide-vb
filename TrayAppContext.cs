@@ -50,6 +50,8 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         var menu = new ContextMenuStrip();
         menu.Items.Add($"Status: {_status}").Enabled = false;
+        menu.Items.Add($"Game: {VoiceMeeterTargets.FindOrCreate(_config.VoiceMeeterLayout, _config.GameParameter)}").Enabled = false;
+        menu.Items.Add($"Chat: {VoiceMeeterTargets.FindOrCreate(_config.VoiceMeeterLayout, _config.ChatParameter)}").Enabled = false;
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_config.Enabled ? "Disable ChatMix" : "Enable ChatMix", null, (_, _) => ToggleEnabled());
         menu.Items.Add("Game +", null, (_, _) => RunVoiceMeeterAction(_chatMix.NudgeGame));

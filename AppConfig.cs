@@ -7,6 +7,7 @@ namespace SonarSlideVB;
 internal sealed class AppConfig
 {
     public string DllPath { get; set; } = "";
+    public string VoiceMeeterLayout { get; set; } = VoiceMeeterTargets.Banana;
     public string GameParameter { get; set; } = "Strip[3].Gain";
     public string ChatParameter { get; set; } = "Strip[4].Gain";
     public string ToggleHotkey { get; set; } = "Ctrl+Alt+M";
