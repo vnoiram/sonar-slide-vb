@@ -1,5 +1,7 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 
 namespace SonarSlideVB;
@@ -72,7 +74,7 @@ internal sealed class TrayAppContext : ApplicationContext
         menu.Items.Add("Diagnostics: probe Game", null, (_, _) => ProbeTarget("Game", _chatMix.ProbeGame));
         menu.Items.Add("Diagnostics: probe Chat", null, (_, _) => ProbeTarget("Chat", _chatMix.ProbeChat));
         menu.Items.Add("Diagnostics: restart Nova 7 dial", null, (_, _) => _nova7.Start(_config));
-        menu.Items.Add($"Open log: {AppLog.LogPath}").Enabled = false;
+        menu.Items.Add("Open Log", null, (_, _) => OpenLog());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Reconnect", null, (_, _) => TryConnect(showNotification: true));
         menu.Items.Add("Settings", null, (_, _) => ShowSettings());
@@ -218,6 +220,25 @@ internal sealed class TrayAppContext : ApplicationContext
         RegisterHotkeys();
         _nova7.Start(_config);
         TryConnect(showNotification: true);
+    }
+
+    private void OpenLog()
+    {
+        try
+        {
+            Directory.CreateDirectory(AppConfig.ConfigDirectory);
+            if (!File.Exists(AppLog.LogPath))
+            {
+                File.WriteAllText(AppLog.LogPath, "");
+            }
+
+            Process.Start(new ProcessStartInfo(AppLog.LogPath) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("Open log failed", ex);
+            ShowBalloon(ex.Message, ToolTipIcon.Warning);
+        }
     }
 
     private void ShowBalloon(string message, ToolTipIcon icon = ToolTipIcon.Info)
