@@ -10,12 +10,20 @@ internal sealed class RawInputLogger : IDisposable
     private const int RidInput = 0x10000003;
     private const int RidiDevicename = 0x20000007;
     private const int RidevInputsink = 0x00000100;
+    private const int RidevRemove = 0x00000001;
+    private bool _registered;
+
+    public bool IsRegistered => _registered;
 
     public void Register(IntPtr hwnd)
     {
+        if (_registered)
+        {
+            return;
+        }
+
         var devices = new[]
         {
-            new RawInputDevice { UsagePage = 0x01, Usage = 0x06, Flags = RidevInputsink, Target = hwnd },
             new RawInputDevice { UsagePage = 0x0C, Usage = 0x01, Flags = RidevInputsink, Target = hwnd },
         };
 
@@ -25,7 +33,30 @@ internal sealed class RawInputLogger : IDisposable
             return;
         }
 
-        AppLog.Info("Raw input logging registered for keyboard and consumer-control HID devices.");
+        _registered = true;
+        AppLog.Info("Raw input logging registered for consumer-control HID diagnostics.");
+    }
+
+    public void Unregister()
+    {
+        if (!_registered)
+        {
+            return;
+        }
+
+        var devices = new[]
+        {
+            new RawInputDevice { UsagePage = 0x0C, Usage = 0x01, Flags = RidevRemove, Target = IntPtr.Zero },
+        };
+
+        if (!RegisterRawInputDevices(devices, (uint)devices.Length, (uint)Marshal.SizeOf(typeof(RawInputDevice))))
+        {
+            AppLog.Info($"UnregisterRawInputDevices failed: {Marshal.GetLastWin32Error()}");
+            return;
+        }
+
+        _registered = false;
+        AppLog.Info("Raw input logging unregistered.");
     }
 
     public void LogMessage(Message message)
@@ -52,8 +83,7 @@ internal sealed class RawInputLogger : IDisposable
 
             if (raw.Header.Type == 1)
             {
-                AppLog.Info(
-                    $"RawInput keyboard device={deviceName}, make={raw.Keyboard.MakeCode}, flags={raw.Keyboard.Flags}, vkey=0x{raw.Keyboard.VKey:X}, message=0x{raw.Keyboard.Message:X}");
+                AppLog.Info($"RawInput keyboard event suppressed device={deviceName}");
             }
             else if (raw.Header.Type == 2)
             {
@@ -73,6 +103,7 @@ internal sealed class RawInputLogger : IDisposable
 
     public void Dispose()
     {
+        Unregister();
     }
 
     private static string GetDeviceName(IntPtr device)

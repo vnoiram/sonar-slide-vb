@@ -19,7 +19,18 @@ internal sealed class HotkeyManager : NativeWindow, IDisposable
     public HotkeyManager()
     {
         CreateHandle(new CreateParams());
-        _rawInput.Register(Handle);
+    }
+
+    public void SetRawInputLoggingEnabled(bool enabled)
+    {
+        if (enabled)
+        {
+            _rawInput.Register(Handle);
+        }
+        else
+        {
+            _rawInput.Unregister();
+        }
     }
 
     public void Register(string name, string hotkey)
@@ -52,6 +63,7 @@ internal sealed class HotkeyManager : NativeWindow, IDisposable
     public void Dispose()
     {
         Clear();
+        _rawInput.Dispose();
         DestroyHandle();
     }
 
@@ -63,7 +75,7 @@ internal sealed class HotkeyManager : NativeWindow, IDisposable
             return;
         }
 
-        if (m.Msg == WmInput)
+        if (m.Msg == WmInput && _rawInput.IsRegistered)
         {
             _rawInput.LogMessage(m);
         }

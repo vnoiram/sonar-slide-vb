@@ -40,6 +40,7 @@ internal sealed class TrayAppContext : ApplicationContext
         RebuildMenu();
         TryConnect(showNotification: false);
         RegisterHotkeys();
+        UpdateRawInputLogging();
         _nova7.Start(_config);
     }
 
@@ -218,8 +219,14 @@ internal sealed class TrayAppContext : ApplicationContext
         _config = form.Config;
         _chatMix.UpdateConfig(_config);
         RegisterHotkeys();
+        UpdateRawInputLogging();
         _nova7.Start(_config);
         TryConnect(showNotification: true);
+    }
+
+    private void UpdateRawInputLogging()
+    {
+        _hotkeys.SetRawInputLoggingEnabled(_config.DialMode == DialModes.Custom);
     }
 
     private void OpenLog()
